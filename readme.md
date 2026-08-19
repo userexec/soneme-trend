@@ -40,18 +40,43 @@ Both analyses and correlations are generated when requested using the data from 
 
 Note Datum are internally referenced by a UID, not their name, so that renaming them doesn't break Correlations.
 
-Data is saved in CSV files under the SonemeTrend folder selected. Each CSV file contains "Timestamp", "Value", "Unit", "Time Basis", and "Goal" in row 1 columns 1-5, valid timestamps in column 1 rows 3-x, values in column 2 rows 3-x, units string in column 3 row 2, time basis string in column 4 row 2, and empty cell or number or float in column 5 row 2. In summary, headings are on row 1, settings are on row 2, and data starts on row 3. CSV data (that is, row 3 and on) is always chronological ascending. New data that requires a new row should be inserted into the order rather than appended after it.
+Data is saved in CSV files under the SonemeTrend folder selected. UTF-8, normal comma separation, quote cells containing commas or quotes, escape quotes, accept LF or CRLF, etc. Each CSV file contains "Timestamp", "Value", "Unit", "Time Basis", and "Goal" in row 1 columns 1-5, valid timestamps in column 1 rows 3-x, values in column 2 rows 3-x, units string in column 3 row 2, time basis string in column 4 row 2, and empty cell or number or float in column 5 row 2. In summary, headings are on row 1, settings are on row 2, and data starts on row 3. CSV data (that is, row 3 and on) is always chronological ascending. New data that requires a new row should be inserted into the order rather than appended after it.
 
 ```
 Timestamp,Value,Unit,Time Basis,Goal
 ,,calories,days,2000
-"August 17 2026, 1875",1450,,,
-"August 18 2026, 1940",1525,,,
+"August 17, 2026",1450,,,
+"August 18, 2026",1525,,,
 ```
 
-Note that CSVs may be routinely synced and edited on external devices, so the app should never assume that they're the same as the last time a view was entered.
+Note that CSVs may be routinely synced and edited on external devices, so the app should never assume that they're the same as the last time a view was entered. Ownership of information is as follows:
 
-The concept of time basis bears some explaining. Time basis determines how data points are divided into rows. Valid options are "minutes", "hours", "days", "weeks", "months" and "years". If the time basis is minutes, then each data point is for one minute, and two rows in the CSV may not share timestamps in the same minute. When the timestamp is represented, it is represented out to the minute. If the time basis is in months, then two rows in the CSV cannot share the same month. When recording data, the current data/time is reduced to a timestamp appropriate to the dataset's time basis. 
+App-private registry
+ - UID
+ - display name
+ - CSV filename
+ - ordering
+ - correlation definitions → UIDs
+
+CSV
+ - unit
+ - time basis
+ - goal
+ - all measurements
+
+Every mutating operation re-reads and validates the current CSV immediately before applying its mutation. These mutations occur in the Datum view and Datum Add view. If the file changed and is still valid, perform the mutation on the new file and reload the view. If the file became invalid, do not perform the mutation and fall back to Data view.
+
+Thus, an Increment operation looks like:
+ - read current file
+ - parse current rows
+ - alter this bucket
+ - normalize chronological order
+ - write
+ - rebuild view
+
+Technically this does mean an increment operation could operate on a number that's unexpected if the current row was changed between the time the person opened Datum view on their phone, typed a number, and pressed increment, but at this point the user should simply know better and we can't save them from themselves. They can always fix the value.
+
+The concept of time basis bears some explaining. Time basis determines how data points are divided into rows. Valid options are "minutes", "hours", "days", "weeks", "months" and "years". If the time basis is minutes, then each data point is for one minute, and two rows in the CSV may not share timestamps in the same minute. When the timestamp is represented, it is represented out to the minute. If the time basis is in months, then two rows in the CSV cannot share the same month. When recording data to CSV, the current data/time is reduced to a timestamp appropriate to the dataset's time basis as follows:
 
 Timestamp formats:
  - August 17, 2026, 2:43 PM
@@ -95,9 +120,9 @@ Chart header, to left:
 
 Chart header, to right:
 
-Time range select menu, "All time", "last year", "last month", "last week", "last day", "last hour" with options logically eliminated by the current dataset's time basis (e.g. monthly data will not have a "last month", "last week", or a "last day" option since that would mean one or fewer data point could be rendered). Note "last year" means 365 days, "last month" means 30 days, "last week" means 7 days, and "last day" means the previous 24 hours/1440 minutes. The chart's timeframe just means "look back by the common amount of time meant by this word," not literally "previous calendar month."
+Time range select menu, "All time", "last year", "last month", "last week", "last day", "last hour" with options logically eliminated by the current dataset's time basis (e.g. monthly data will not have a "last month", "last week", or a "last day" option since that would mean one or fewer data point could be rendered). Note "last year" means 365 days, "last month" means 30 days, "last week" means 7 days, "last day" means the previous 24 hours/1440 minutes, and "last hour" means the previous 60 minutes. The chart's timeframe just means "look back by the common amount of time meant by this word," not literally "previous calendar month."
 
-In Correlations, the range select menu's options are limited to the coarsest time base line being displayed. For example, if a daily and a monthly time base line are displayed in a correlation, the range selector behaves as if the chart is for a monthly time base dataset.
+In Correlations, the range select menu's options are limited to the coarsest currently available associated Datum. For example, if a daily and a monthly time base line are displayed in a correlation, the range selector behaves as if the chart is for a monthly time base dataset.
 
 The chart header is not used on the Datum view.
 
@@ -113,7 +138,7 @@ The right-hand edge of a chart is always defined by the most recent data point a
 
 Y axis range determined by data values being shown.
 
-Y axis top value is the highest charted point's value (or possibly goal line value in Datum and Analysis view, see later rules) with 2 added to its second significant digit and remaining digits zeroed (e.g. 215 becomes 230, 3451 becomes 3600, 0.0757 becomes 0.077). If the top value is negative, then 2 is removed from its second signifiant digit instead and remaining digits are zeroed (e.g. -215 becomes -190, -3451 becomes -3200, -0.757 becomes -0.73). If the minimum and maximum coincide, use 1 and -1 as the maximum and minimum.
+Y axis top value is the highest charted point's value (or possibly goal line value in Datum and Analysis view, see later rules) with 2 added to its second significant digit and remaining digits zeroed (e.g. 215 becomes 230, 3451 becomes 3600, 0.0757 becomes 0.077). If the top value is negative, then 2 is removed from its second signifiant digit instead and remaining digits are zeroed (e.g. -215 becomes -190, -3451 becomes -3200, -0.757 becomes -0.73). If the minimum and maximum coincide, use that value + 1 and that value - 1 as the maximum and minimum.
 
 Y-axis bottom value works the same way but in reverse--positive numbers get 2 removed from second most significant digit, negative numbers get 2 added. Same deal if goal line is below the lowest point, it forms the lowest bound.
 
@@ -139,7 +164,7 @@ List of Data items. Clicking one opens its Datum view.
 
 Items are the name (marquee if too long), subtext of "X data points" to the left, date/time of last entry (pretty) on the right.
 
-Verify that the Datum's CSV file exists and is readably formatted when generating this view. Files may change. If a file is missing or malformed, gray out the Datum and disable clicking it, but otherwise let the user decide if deletion is warranted. The file may be gone only temporarily while edits are made on another device.
+Verify that the Datum's CSV file exists and is readably formatted when generating this view. Files may change. If a file is missing or malformed, replace subtext with "[file] missing or unreadable" in dark red (marquee if too long). Deletion and reordering still work. Clicking the Datum opens Datum Setup in a recovery mode where the file can be re-specified.
 
 #### Options menu
 
@@ -189,7 +214,7 @@ Verify that the associated Datum's CSV file exists and is readably formatted whe
 
 List of available Correlation items. Name first (marquee if too long), then subtext one-per-line of Analysis items this correlation is made from.
 
-Verify that the associated Datum CSV files exist and are readably formatted when generating this view. Files may change. If a file is missing or malformed, change the missing Datum's subtext to red, but otherwise allow normal clicking. If fewer than 2 Datum are available, clicking opens Correlation Setup view instead for this correlation with the missing Datum unchecked.
+Verify that the associated Datum CSV files exist and are readably formatted when generating this view. Files may change. If a file is missing or malformed, change the missing Datum's subtext to red, but otherwise allow normal clicking. The correlation will just use the available Datum. If fewer than 2 Datum are available, clicking opens Correlation Setup view instead for this correlation with the missing Datum unchecked. Opening Correlation Setup in this repair mode does not alter the stored Correlation. Back leaves its original membership intact. Only Save changes the Correlation definition.
 
 #### Options menu
 
@@ -219,7 +244,7 @@ Form:
 
 Name - Name to be displayed in the Data list. Must be unique among Data items, case-insensitive.
 
-CSV filename - file is saved to the SonemeTrend folder. User is allowed to choose a filename since it's assumed this file will be transferred for use elsewhere with Soneme Sync and may have special naming considerations. Name must contain only filename-safe characters, end in .csv, and must be unique in the SonemeTrend folder.
+CSV filename - file is saved to the SonemeTrend folder. User is allowed to choose a filename since it's assumed this file will be transferred for use elsewhere with Soneme Sync and may have special naming considerations. Name must contain only filename-safe characters, end in .csv, and the filename must not already be associated with another Datum. If it exists in the SonemeTrend folder and is a valid unattached Soneme Trend CSV, it will be attached to this new Datum. If it does not exist, a new CSV will be created.
 
 Units - What are you measuring? Show label "Units, Y-axis", line below label "e.g. calories, repetitions, millimeters"
 
@@ -244,6 +269,8 @@ Books per month
 If a CSV filename that already exists is entered, if it is not associated with any other data items and it contains a valid Soneme Trend layout and values, set the units, time basis, and goal fields to match this CSV and disable entry into them unless filename is changed again to one that doesn't exist. This is how recovery and adding pre-made files works.
 
 This view may be opened again with the Edit option under Datum view. If editing an existing Datum, lock the CSV filename, Units, and Time basis fields. Only the Name and Goal may be adjusted.
+
+This view may also be opened in a "Recovery mode". Lock all fields but CSV filename. On Save, check if provided filename exists and contains a valid layout and if so re-populate the Units, Time basis, and Goal fields from it and return to Data view. If not valid, toast "Invalid CSV".
 
 #### Options menu
 
@@ -306,7 +333,7 @@ When quick entry field is focused, options are:
 
  - Decrement
 
-   Decrements the current timestamp's value with the number in the quick entry field. If no data point exists for the current timestamp, create one and assume its initial value would have been 0. Option disappears when value of quick entry field is not a valid number or float. On success, clear the quick edit field and show a toast "Current [time base] incremented by [quick edit value] to [entry value].". Focus stays in quick edit field.
+   Decrements the current timestamp's value with the number in the quick entry field. If no data point exists for the current timestamp, create one and assume its initial value would have been 0. Option disappears when value of quick entry field is not a valid number or float. On success, clear the quick edit field and show a toast "Current [time base] decremented by [quick edit value] to [entry value].". Focus stays in quick edit field.
 
  - Set
 
@@ -314,7 +341,7 @@ When quick entry field is focused, options are:
 
  - Increment
 
-   Increments the current timestamp's value with the number in the quick entry field. If no data point exists for the current timestamp, create one and assume its initial value would have been 0. Option disappears when value of quick entry field is not a valid number or float. On success, clear the quick edit field and show a toast "Current [time base] decremented by [quick edit value] to [entry value].". Focus stays in quick edit field.
+   Increments the current timestamp's value with the number in the quick entry field. If no data point exists for the current timestamp, create one and assume its initial value would have been 0. Option disappears when value of quick entry field is not a valid number or float. On success, clear the quick edit field and show a toast "Current [time base] incremented by [quick edit value] to [entry value].". Focus stays in quick edit field.
 
 
 ### Datum Add
@@ -434,7 +461,9 @@ Name input, must be case-insensitive unique among Correlations.
 
 Instructions: Choose two to four datasets.
 
-Checkbox list of Datum names.
+Checkbox list of Datum names. Datum that are unavailable are disabled/grayed out.
+
+This view may be arrived at in a repair mode from Correlations view if too few Datum are available (e.g. their files went missing). In this mode the unavailable Datum are unchecked, but no changes are made until Save is pressed and the user can still hit back to retain original membership.
 
 #### Options menu
 
@@ -474,10 +503,12 @@ Goal lines are not considered in Correlation views.
 
 #### Options menu
 
- - (blank)
+ - Edit
+
+   Opens Correlation Setup for this Correlation
 
  - (blank)
 
  - Line
 
-   Opens menu with the current Correlation's datum names. Selecting one focuses the last point in its line, changes the colored bar to its color, populates the last point's data into the colored bar, and foregrounds its line over the others.
+   Opens menu with the current Correlation's available datum names. Selecting one focuses the last point in its line, changes the colored bar to its color, populates the last point's data into the colored bar, and foregrounds its line over the others.
