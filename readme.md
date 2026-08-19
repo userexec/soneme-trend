@@ -4,21 +4,48 @@ Soneme Trend is a minimal logging and charting app that lets you define trends y
 
 The key to Soneme Trend is it's general purpose, portable, and non-prescriptive. It's not a tracker exclusively for your habits, mood, money, calories, sleep, period, bench press, or anything else. It's whatever you want of it, sitting there as a clean CSV transferrable with Soneme Sync if you have deeper analysis needs. It's the core of every tracker app, minus the chrome, the account, and the subscription.
 
+# Target device properties
+
+The Sonim XP3900 has the following constraints:
+
+- 240x320
+- Android 11 Go
+- No touchscreen
+- Options menu softkeys
+- No Google Play Store or services
+- App must be sideloaded as an .apk
+- Smallest width set to 320 dp in developer options
+
 ## Application overview
+
+On first setup, application asks the user to select a storage folder. First, an informational screen is shown explaining that no SonemeTrend folder is configured and that the user should select either the location containing an existing one or where a new one should be created. Softkeys are Exit (blank) Set up. Set up launches DocumentsUI to pick a folder, Exit returns to launcher. Cancelling from DocumentsUI without picking a folder puts the user back on the informational screen.
+
+Resolve the actual SonemeTrend folder as follows:
+
+ - If the selected folder itself is named "SonemeTrend" (case-insensitive), use it.
+ - Otherwise, if the selected folder already contains a child folder named "SonemeTrend" (case-insensitive), use that existing child.
+ - Otherwise, create a new "SonemeTrend" child folder inside the selected folder and use it. Persist access to the selected storage tree and remember the resolved SonemeTrend folder within it. Do not create a second SonemeTrend folder merely because an existing one uses different capitalization, and do not rename an existing case variant just to normalize capitalization.
 
 Application has three tabs: Data, Analyses, and Correlations
 
-Application opens to Data view.
+Application normally opens to Data view.
 
-The data tab is a listing of trends you're tracking. Each of these consists of a name, a basic chart, and the ability to enter data.
+The data tab is a listing of trends you're tracking. These are referred to in this spec as Datum, and are interacted with in the Datum view.
 
-The analyses tab is a listing of analyses, each of which are more in-depth views of the each trend. Analyses are automatically defined, one per datum, and are ephemeral.
+The analyses tab is a listing of analyses, each of which are more in-depth views of the each trend. Analyses are automatically defined, one per Datum, and while their listing is coupled to the data listing, the information shown in them is assembled only when requested--the statistics etc. that are shown are not saved to CSV, for example.
 
-The correlations tab is a listing of custom reports, which are set up by choosing between two and four datasets to see together on the same chart. Correlations are user-defined, and while the definition is persistent, each viewing of the resulting chart is ephemeral.
+The correlations tab is a listing of custom reports, which are set up by choosing between two and four datasets to see together on the same chart. Correlations are user-defined, and while the definition is persistent, each viewing of the resulting chart is assembled only when requested.
 
 Both analyses and correlations are generated when requested using the data from the trends. The trends themselves are the only things that leave artifacts in the form of CSVs on the filesystem.
 
-Data is saved in CSV files under the SonemeTrend folder selected. Each CSV file contains "Timestamp", "Value", "Unit", "Time Basis", and "Goal" in row 1 columns 1-5, valid timestamps in column 1 rows 2-x, values in column 2 rows 2-x, units string in column 3 row 2, time basis string in column 4 row 2, and empty cell or number or float in column 5 row 2.
+Data is saved in CSV files under the SonemeTrend folder selected. Each CSV file contains "Timestamp", "Value", "Unit", "Time Basis", and "Goal" in row 1 columns 1-5, valid timestamps in column 1 rows 3-x, values in column 2 rows 3-x, units string in column 3 row 2, time basis string in column 4 row 2, and empty cell or number or float in column 5 row 2. In summary, headings are on row 1, settings are on row 2, and data starts on row 3.
+
+```
+Timestamp,Value,Unit,Time Basis,Goal
+,,calories,days,2000
+August 17 2026,1875,,,
+August 18 2026,1940,,,
+```
 
 The concept of time basis bears some explaining. Time basis determines how data points are divided into rows. Valid options are "minutes", "hours", "days", "weeks", "months" and "years". If the time basis is minutes, then each data point is for one minute, and two rows in the CSV may not share timestamps in the same minute. When the timestamp is represented, it is represented out to the minute. If the time basis is in months, then two rows in the CSV cannot share the same month. When recording data, the current data/time is reduced to a timestamp appropriate to the dataset's time basis. 
 
@@ -30,9 +57,11 @@ Timestamp formats:
  - August 2026
  - 2026
 
-Any time a timestamp needs to be converted and it is missing information to do so, e.g. a year timestamp needs to be converted to a minute timestamp, the first possible value is assumed for any missing. For example, the year timestamp 2026 converted to a minute timestamp is January 1, 2026, 12:01 AM. August 16-22, 2026 converted to hour is August 16, 2026, 12 AM. Conversion is only used in Correlation views where datasets in multiple timebases may need to be displayed on the same chart.
+Any time a timestamp needs to be converted and it is missing information to do so, e.g. a year timestamp needs to be converted to a minute timestamp, the first possible value is assumed for any missing. For example, the year timestamp 2026 converted to a minute timestamp is January 1, 2026, 12:00 AM. August 16-22, 2026 converted to hour is August 16, 2026, 12 AM. Conversion is only used in Correlation views where datasets in multiple timebases may need to be displayed on the same chart.
 
-A charting library will need to be selected.
+Whether week dates are Sunday-Saturday or Monday-Sunday should be based on the phone's locale.
+
+Charts may be implemented as a custom Android View; an external charting library is not required.
 
 ## Charts
 
@@ -40,7 +69,7 @@ All charts are line charts.
 
 Datum and Analysis views have a fill under their line of their color at 40% opacity. Correlation view omits the fill to make lines more visible in comparison to each other.
 
-Goal line, if a goal value is present for dataset, is a horizontal line across the chart. It is not drawn if the goal value is 0.
+Goal line, if a goal value is present for dataset, is a horizontal line across the chart.
 
 Points when focused enlarge by 2x size and take on the highlight color.
 
@@ -52,7 +81,7 @@ Line colors when multiple lines are present are #4F6F8F, #B07156, #7B9E72, and #
 
 Highlight colors are respectively #0070E0, #FF5005, #3FFF0F, and #FA0047
 
-Line charts respect empty X axis time units and draw straight lines between data points that may be separated by unusued X axis.
+Line charts respect empty X axis time units and draw straight lines between data points that may be separated by unusued X axis. The data does not fall to 0 if a unit of time does not have a row with a value for it. In Correlation view, some lines may not reach the edges. Where the data cuts off, the line simply stops.
 
 If the chart is inspectable (Analysis and Correlation views) the user can cycle through data points shown using left and right on the D-pad. The data point is highlighted on the chart and its timestamp and value are shown in a color-matched box below the chart.
 
@@ -72,15 +101,19 @@ If a chart header/range selector is not called for (Datum view), the last 10 dat
 
 If any chart has fewer than two data points available in its range (or fewer than two in total if charting without a range selector), the chart is omitted from the view. A placeholder box with "insufficient data to chart" is shown.
 
-Y-axis range determined by data values being shown. Top value of axis is either the goal value or the highest visible data value's most significant digit raised by one and all other values zeroed, whichever is higher. For example if no goal line and the top value is 26, the top of the chart is 30. If it's 315 and goal line is only 250, top of chart is 400. If it's 0.76, top of chart is 1; but if it's 0.76 and goal is 2, top of chart is 2.
+Y axis range determined by data values being shown.
 
-Y-axis labels and tick marks are at minimum, maximum, and two intermediary values.
+Y axis top value is the highest charted point's value (or possibly goal line value in Datum and Analysis view, see later rules) with 2 added to its second most significant digit and remaining digits zeroed (e.g. 215 becomes 230, 3451 becomes 3600, 0.0757 becomes 0.077). If the top value is negative, then 2 is removed from its most signifiant digit instead and remaining digits are zeroed (e.g. -215 becomes -190, -3451 becomes -3200, -0.757 becomes -0.73).
 
-X-axis labels are never shown on the the chart itself. The X range is presented in the views' headings centered text consisting of the date/time of the chart's left edge (whether or not a data point is on that value), and the date/time of the last data point shown. In Datum views, since a data point will always be the left edge, the date/time of the first and last data points charted are used.
+Y-axis bottom value works the same way but in reverse--positive numbers get 2 removed from second most significant digit, negative numbers get 2 added. Same deal if goal line is below the lowest point, it forms the lowest bound.
 
-X-axis tick marks are based on the range selected e.g. last week shows ticks for days, last year shows ticks for months. "All time" omits tick marks. Datum view also omits ticks on the X axis.
+In Datum and Analysis views, goal lines are drawn and if higher than the charted data's highest point value, or lower than the charted data's lowest point value, they are considered the highest or lowest value respectively instead of the highest or lowest point for the purposes of Y axis range. Goal lines are not used in Correlation views.
 
-If the charting library is actually good at generating logical tick marks and labels on tiny displays, these behaviors can be revised to let it shine. Consider the stated rules on ticks and labels to be safe-ish targets considering the display area and type, but I'm open to changes.
+Y axis labels and tick marks are at minimum, maximum, and two intermediary values.
+
+X axis labels are never shown on the the chart itself. The X range is presented in the views' headings centered text consisting of the date/time of the chart's left edge (whether or not a data point is on that value), and the date/time of the last data point shown. In Datum views, since a data point will always be the left edge, the date/time of the first and last data points charted are used.
+
+X axis tick marks are based on the range selected e.g. last week shows ticks for days, last year shows ticks for months. "All time" omits tick marks. Datum view also omits ticks on the X axis.
 
 ## Views
 
@@ -100,7 +133,9 @@ Items are the name (marquee if too long), subtext of "X data points" to the left
 
  - Delete
 
-   Opens confirmation "Delete [name]?"
+   Opens confirmation "Delete [name]? This will also remove all data points recorded.", options "Cancel" (default) and "Delete". Choosing delete deletes the Datum and its settings, and also its associated CSV.
+
+   On delete also remove this Datum from the configuration of any Correlations. If a Correlation fell below 2 Datum, automatically delete the Correlation.
 
  - Move up
 
@@ -168,13 +203,13 @@ Form:
 
 Name - Name to be displayed in the Data list. Must be unique among Data items, case-insensitive.
 
-CSV Filename - file is saved to the SonemeTrend folder. User is allowed to choose a filename since it's assumed this file will be transferred for use elsewhere with Soneme Sync and may have special naming considerations. Name must contain only filename-safe characters, end in .csv, and must be unique in the SonemeTrend folder.
+CSV filename - file is saved to the SonemeTrend folder. User is allowed to choose a filename since it's assumed this file will be transferred for use elsewhere with Soneme Sync and may have special naming considerations. Name must contain only filename-safe characters, end in .csv, and must be unique in the SonemeTrend folder.
 
 Units - What are you measuring? Show label "Units, Y-axis", line below label "e.g. calories, repetitions, millimeters"
 
 Time basis - By what unit of time are measurements considered a single data point? Show label "Time basis per measurement, X-axis", lines below label "Determines when a data point is incremented versus when a new data point is created." "How often do you plan to take measurements?". Input is a select with options for "per minute", "per hour", "per day", "per week", "per month", and "per year".
 
-Goal - Optional value, draws a horizontal line on the chart and is used in an Analysis display. Must be a number or float greater than or equal to 0.
+Goal - Optional value, draws a horizontal line on the chart and is used in an Analysis display. Must be a number or float.
 
 
 Text block below form:
@@ -192,6 +227,8 @@ Books per month
 
 If a CSV filename that already exists is entered, if it is not associated with any other data items and it contains a valid Soneme Trend layout and values, set the units, time basis, and goal fields to match this CSV and disable entry into them unless filename is changed again to one that doesn't exist. This is how recovery and adding pre-made files works.
 
+This view may be opened again with the Edit option under Datum view. If editing an existing Datum, lock the CSV filename, Units, and Time basis fields. Only the Name and Goal may be adjusted.
+
 #### Options menu
 
  - Cancel
@@ -205,6 +242,8 @@ If a CSV filename that already exists is entered, if it is not associated with a
 ### Datum
 
 #### Controls
+
+- Back button returns to Data view unless cursor is in quick entry field, in which case it will naturally act as a backspace. User will need to change focus to activate back. An invisible anchor at top of page may need to be provided so that D-pad up can be used to unfocus the quick entry field naturally, but this may also be handled with normal scroll actions, really not sure--might just require testing.
 
 #### Main content
 
@@ -221,11 +260,13 @@ Subtext "Records"
 
 Small chart preview of up to 10 most recent points, roughly half screen height. No chart header/range selector.
 
-Quick entry field - Adds a data point with a timestamp of now. Only accepts valid whole numbers and floats (positive only). Keying input method always changes to 123 (numeric) when this field is focused--not sure how that works, but some form of marking the field as numeric only likely activates this on the system.
+Quick entry field - Adds a data point with a timestamp of now. Only accepts valid whole numbers and floats. Keying input method always changes to 123 (numeric) when this field is focused--not sure how that works, but some form of marking the field as numeric only likely activates this on the system.
 
 Data points heading
 
 Data points list with focusable data points presented as two columns, Timestamp and Value. List is in descending order of points' timestamps, most recent first. Focus focuses both columns for a given point and shows a Remove option in the options menu. Removal of a point refreshes the chart preview, but focus stays where it was. It is now on the following data point in the list if additional points existed, or on the previous data in the list if removed was the last in list. If no data points remain, focus goes to the quick entry field.
+
+"No data recorded yet" displayed if no entries.
 
 If at any point in this view the user types a number on the keypad while not focused into the quick entry field, insert the number into the quick entry field and focus the quick entry field with the cursor at the end.
 
@@ -235,11 +276,15 @@ When the quick entry field is not focused, options are:
 
  - Remove
 
-   Only appears if focus is on a data point item
+   Only appears if focus is on a data point item. Opens confirmation 'Remove data point "[value]" from [timestamp]?'. Options "Cancel" (default) and "Remove". Remove removes the row in the CSV and refreshes this Datum. Focus behavior is described above in Main Content heading for Datum view.
 
- - (blank)
+ - Edit
 
- - New
+   Opens Datum Setup
+
+ - New Point
+
+   Opens Datum Add
 
 When quick entry field is focused, options are:
 
@@ -312,26 +357,35 @@ Chart with header and range selector, large format, taking up most of screen.
 
 Colored bar in chart's line color with white text takes up remaining "above the fold" screen. Focus in this view begins on the right-most data point in the chart, and only the chart points are focusable in this view. Colored bar shows data point timestamp to left and value to right.
 
-Statistics heading:
+Statistics heading
 
 If less than 2 data points exist, "insufficient data for statistics" is shown.
 
-Large number:
-overall % change
+Change over time subheading
 
-Smaller numbers:
-% change over [largest range with complete data, e.g. "last year"]
-repeat with each smaller range until dataset time base is reached.
+Overall change - Large number (green with green up arrow if increase, red with red down arrow if decrease):
 
-Percent changes ideally assume data exists on the points in question, i.e. for "last year" hopefully there's a data point today and exactly 365 days ago. If not, then assume today's value would be unchanged from the most recent value, and if no point exists 365 days ago, interpolate between the two data points on either side of the 365 day mark. If a data point only exists 364 days ago, there is not enough data and "% change over last year" would need to wait one more day to be shown. This pattern repeats down to the dataset time base. Smaller ranges are thus more likely to have "% change over" entries, but the Analysis view may have none to show if this is a relatively new dataset (e.g. a weekly set that is less than 7 days old).
+Smaller numbers (normal formatting, black text):
+Change over [largest range with complete data, e.g. "last year"], repeat with each smaller range until dataset time base is reached.
 
-Run a least squares linear regression on the dataset to get the following numbers. If answer is negative, clamp to 0. 
+Percent change subheading
+
+All time - Large number (green with green up arrow if increase, red with red down arrow if decrease)
+
+Smaller numbers (normal formatting, black text):
+% change over [largest range with complete data, e.g. "last year"], repeat with each smaller range until dataset time base is reached.
+
+Changes ideally assume data exists on the points in question, i.e. for "last year" hopefully there's a data point today and exactly 365 days ago. If not, then assume today's value would be unchanged from the most recent value, and if no point exists 365 days ago, interpolate between the two data points on either side of the 365 day mark. If a data point only exists 364 days ago, there is not enough data and "% change over last year" would need to wait one more day to be shown. This pattern repeats down to the dataset time base. Smaller ranges are thus more likely to have "% change over" entries, but the Analysis view may have none to show if this is a relatively new dataset (e.g. a weekly set that is less than 7 days old). Percent changes are rounded to the nearest whole number. Changes over time are limited to two decimal places if the answer is below 1, one decimal place if the answer is over 1 but less than 100, and no decimal places if the answer is 100 or more.
+
+Percent change from 0: If the baseline for any comparison would be zero, do not calculate and do not show the calculation. If a dataset starts at 0, it will never show an overall % change, for example. If a dataset dips to 0 and that would be the number to compare to over a "% change over" window, do not calculator or show that statistic.
+
+Run a least squares linear regression on the dataset to get the following numbers. Regression should be over elapsed time, not just the data's position in the dataset.
 
 If a goal value exists and regression indicates it will be reached:
 Estimated time to goal: [time in dataset time base e.g. 5 weeks]
 (if regression indicates it will not be reached, "Current values suggest goal will not be reached without changes.")
 
-Estimated value in...
+"Estimated value in..." heading, multiple items below may be shown depending on dataset timebase.
  - one day (if time base is minutes)
  - one week (if time base is days or minutes)
  - one month (if time base is weeks, days, or minutes)
@@ -389,7 +443,11 @@ Chart with header and range selector, large format, taking up most of screen.
 
 Colored bar in currently selected line color with white text takes up remaining "above the fold" screen. Focus in this view begins on the right-most data point in the chart's first dataset's line, and only the chart points of the selected line are focusable in this view. Colored bar shows data point timestamp to left and value to right.
 
-Chart X axis (timescale) is determined by the dataset with the oldest point recorded in this correlation, and is presented in that dataset's time base.
+Chart Y-axis markings are controlled by the selected line, though all lines independently follow their own Y axis whether or not it is visible.
+
+X axis ticks are determined by the range selected.
+
+Goal lines are not considered in Correlation views.
 
 #### Options menu
 
