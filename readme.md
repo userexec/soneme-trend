@@ -1,534 +1,526 @@
 # Soneme Trend
 
-Soneme Trend is a minimal logging and charting app that lets you define trends you'd like to track, then quickly enter data on a routine basis to build out a chart. Multiple trends can be viewed together on a chart to pick out correlations.
+![Soneme Trend Icon](https://github.com/userexec/soneme-trend/blob/master/soneme_trend_icon.png?raw=true)
 
-The key to Soneme Trend is it's general purpose, portable, and non-prescriptive. It's not a tracker exclusively for your habits, mood, money, calories, sleep, period, bench press, or anything else. It's whatever you want of it, sitting there as a clean CSV transferrable with Soneme Sync if you have deeper analysis needs. It's the core of every tracker app, minus the chrome, the account, and the subscription.
+Soneme Trend is a small, keypad-friendly Android logging, charting, and analysis app built for the Sonim XP3Plus XP3900.
 
-# Target device properties
+It is deliberately general-purpose. Trend is not specifically a habit tracker, calorie tracker, exercise log, finance app, sleep tracker, mood journal, or anything else. A Datum can be whatever numeric thing you want to record over time, and its measurements live in an ordinary CSV file that can be copied, synchronized, inspected, or analyzed elsewhere.
 
-The Sonim XP3900 has the following constraints:
+The basic idea is simple: define something to measure, enter values as often as makes sense, then use **Analyses** for a deeper look at one series or **Correlations** to place several series on the same timeline.
 
-- 240x320
-- Android 11 Go
-- No touchscreen
-- Options menu softkeys
-- No Google Play Store or services
-- App must be sideloaded as an .apk
-- Smallest width set to 320 dp in developer options
+Trend is designed around the XP3900's D-pad, numeric keypad, and three Sonim softkeys. There are no touch controls for the main interface.
 
-## Application overview
+![Data view screenshot](https://github.com/userexec/soneme-trend/blob/master/screenshot-data.png?raw=true)  ![Datum view screenshot](https://github.com/userexec/soneme-trend/blob/master/screenshot-datum.png?raw=true)  ![Analysis screenshot](https://github.com/userexec/soneme-trend/blob/master/screenshot-analysis1.png?raw=true)  ![Analysis screenshot](https://github.com/userexec/soneme-trend/blob/master/screenshot-analysis2.png?raw=true)  ![Analysis screenshot](https://github.com/userexec/soneme-trend/blob/master/screenshot-analysis3.png?raw=true)  ![Correlations view screenshot](https://github.com/userexec/soneme-trend/blob/master/screenshot-correlations.png?raw=true)  ![Correlation screenshot](https://github.com/userexec/soneme-trend/blob/master/screenshot-correlation1.png?raw=true)  ![Correlation screenshot](https://github.com/userexec/soneme-trend/blob/master/screenshot-correlation2.png?raw=true)  ![Correlation screenshot](https://github.com/userexec/soneme-trend/blob/master/screenshot-correlation3.png?raw=true)
 
-On first setup, application asks the user to select a storage folder. First, an informational screen is shown explaining that no SonemeTrend folder is configured and that the user should select either the location containing an existing one or where a new one should be created. Softkeys are Exit (blank) Set up. Set up launches DocumentsUI to pick a folder, Exit returns to launcher. Cancelling from DocumentsUI without picking a folder puts the user back on the informational screen.
+## Features
 
-Resolve the actual SonemeTrend folder as follows:
+* General-purpose numeric data logging
+* Per-minute, per-hour, per-day, per-week, per-month, or per-year data
+* Fast Increment, Set, and Decrement entry from the Datum screen
+* Manual entry for measurements recorded at another date and time
+* Line charts with automatic ranges and optional goal lines
+* Detailed change and percent-change statistics
+* Least-squares trend projection
+* Estimated time to a configured goal
+* Estimated future values at useful intervals
+* Correlation charts comparing two to four data sets
+* Mixed units and mixed Time Bases in Correlations
+* Ordinary UTF-8 CSV files as the portable data store
+* Safe recovery from missing files, moved storage, and application reinstalls
+* External CSV editing supported by design
+* Internal storage or removable SD-card storage
+* Sonim softkey integration
+* No accounts, analytics, advertising, subscriptions, cloud services, or runtime network access
 
- - If the selected folder itself is named "SonemeTrend" (case-insensitive), use it.
- - Otherwise, if the selected folder already contains a child folder named "SonemeTrend" (case-insensitive), use that existing child.
- - Otherwise, create a new "SonemeTrend" child folder inside the selected folder and use it. Persist access to the selected storage tree and remember the resolved SonemeTrend folder within it. Do not create a second SonemeTrend folder merely because an existing one uses different capitalization, and do not rename an existing case variant just to normalize capitalization.
+## Tested Device
 
-If the SonemeTrend folder itself ever disappears, revert to first setup instructions and let the user pick a new folder. This may happen when a user upgrades SD cards, for example.
+Soneme Trend has been developed and tested on:
 
-Application has three tabs: Data, Analyses, and Correlations
+* Sonim XP3Plus XP3900 — Android 11 Go
 
-Application normally opens to Data view.
+The interface is designed for the XP3900's 240x320 non-touch display and native three-position Sonim softkey bar. Development and testing use **Smallest width = 320 dp** in Android Developer options.
 
-The data tab is a listing of trends you're tracking. These are referred to in this spec as Datum, and are interacted with in the Datum view.
+Other Android devices are not a target. A normal touchscreen phone probably will not have the Sonim softkeys the interface expects, and parts of the application may be impractical or inaccessible without them.
 
-The analyses tab is a listing of analyses, each of which are more in-depth views of the each trend. Analyses are automatically defined, one per Datum, and while their listing is coupled to the data listing, the information shown in them is assembled only when requested--the statistics etc. that are shown are not saved to CSV, for example.
+## Installing
 
-The correlations tab is a listing of custom reports, which are set up by choosing between two and four Datum to see together on the same chart. Correlations are user-defined, and while the definition is persistent, each viewing of the resulting chart is assembled only when requested.
+Soneme Trend is distributed as a normal Android APK.
 
-Both analyses and correlations are generated when requested using the data from the trends. The trends themselves are the only things that leave artifacts in the form of CSVs on the filesystem.
+Copy the APK to the device and install it, or install it from a connected computer with ADB:
 
-Note Datum are internally referenced by a UID, not their name, so that renaming them doesn't break Correlations.
-
-Data is saved in CSV files under the SonemeTrend folder selected. UTF-8, normal comma separation, quote cells containing commas or quotes, escape quotes, accept LF or CRLF, etc. Each CSV file contains "Timestamp", "Value", "Unit", "Time Basis", and "Goal" in row 1 columns 1-5, valid timestamps in column 1 rows 3-x, values in column 2 rows 3-x, units string in column 3 row 2, time basis string in column 4 row 2, and empty cell or number or float in column 5 row 2. In summary, headings are on row 1, settings are on row 2, and data starts on row 3. CSV data (that is, row 3 and on) is always chronological ascending. New data that requires a new row should be inserted into the order rather than appended after it. CSV numeric fields value and goal should parse to BigDecimal, reject NaN, infinites, malformed values, etc. Incrementing/decrementing/setting these values should use BigDecimal. Charts and least squares math can convert to Double internally if needed.
-
+```sh
+adb install soneme-trend.apk
 ```
+
+If updating an existing release signed with the same release key:
+
+```sh
+adb install -r soneme-trend.apk
+```
+
+Android may require permission to install apps from unknown sources when installing directly on the phone.
+
+## First Setup
+
+Trend stores its portable data in a normal folder named:
+
+```text
+SonemeTrend
+```
+
+On first launch, Trend explains that no storage folder is configured and asks where the folder should live. Choose **Set up** to open Android's system folder picker.
+
+You may select:
+
+* an existing `SonemeTrend` folder,
+* the folder containing an existing `SonemeTrend` folder,
+* or a storage location where Trend should create a new `SonemeTrend` folder.
+
+Folder-name matching is case-insensitive, so an existing capitalization variant is reused rather than duplicated.
+
+Trend remembers access to that location. If the configured folder later disappears—for example, because an SD card was removed or replaced—Trend returns to the storage setup screen so another location can be selected.
+
+## How Trend Is Organized
+
+The main interface has three tabs. Use D-pad **Left/Right** to move between them and **Up/Down** to move through their lists.
+
+### Data
+
+Data contains the things you are recording.
+
+Each item has a display name and is backed by one CSV file in `SonemeTrend`. Selecting an item opens its Datum screen, where you can quickly enter values, inspect recent measurements, edit its settings, add an older/future point manually, or remove individual points.
+
+The Data list also shows how many points are available and the most recent recorded time.
+
+### Analyses
+
+Trend automatically provides one Analysis for every Datum.
+
+An Analysis shows a larger inspectable chart plus calculated statistics such as change over time, percent change, trend projection, estimated time to goal, and estimated future values.
+
+Analysis results are calculated from the current CSV whenever the view is opened. They are not stored as another data file.
+
+### Correlations
+
+Correlations compare **two to four** Datum on one timeline.
+
+You choose which data sets belong to each Correlation and give the Correlation a name. Its definition is remembered by Trend, but the chart itself is rebuilt from the current CSV files whenever it is viewed.
+
+This is useful for comparing things that may move together—or fail to move together—without forcing every measurement into one specialized tracking system.
+
+## Creating a Datum
+
+From **Data**, choose **New**.
+
+A Datum has the following settings:
+
+### Name
+
+The friendly name shown inside Trend. Datum names must be unique, ignoring capitalization.
+
+The display name is application metadata; it is not embedded in the CSV. This lets you rename a Datum later without renaming or rewriting the portable data file.
+
+### CSV filename
+
+The CSV filename used inside `SonemeTrend`.
+
+If you enter a name without `.csv`, Trend adds the extension when checking and saving it. For example:
+
+```text
+weight
+```
+
+becomes:
+
+```text
+weight.csv
+```
+
+If that file does not exist, Trend creates it.
+
+If the filename already exists and contains a valid, unattached Soneme Trend CSV, Trend attaches the existing file instead of replacing it. Its Units, Time Basis, and Goal are loaded from the file automatically.
+
+### Units
+
+What the Y-axis value means, such as:
+
+* calories
+* pounds
+* millimeters
+* repetitions
+* dollars
+* pages
+
+The app does not interpret the unit. It is simply the label for what you are measuring.
+
+### Time Basis
+
+Time Basis determines the size of one logical data bucket.
+
+Available choices are:
+
+* per minute
+* per hour
+* per day
+* per week
+* per month
+* per year
+
+For example, a daily Datum can contain one logical value for August 20, while an hourly Datum can contain separate values for 2 PM and 3 PM on that same day.
+
+Time Basis does **not** require you to enter data at that exact cadence. It only determines which entries belong to the same logical bucket and how Trend spaces the X-axis.
+
+### Goal
+
+Goal is optional.
+
+When present, it is shown as a horizontal goal line in Datum and Analysis charts and is also used for goal-related estimates in Analysis.
+
+After a Datum has been created, **Edit** allows its Name and Goal to change. CSV filename, Units, and Time Basis remain fixed because changing those would change the meaning or identity of the stored file.
+
+## Quick Entry
+
+The Datum screen is intended to make routine recording very fast.
+
+Move focus to the **Quick entry** field and enter a number. Once the field contains a valid value, the three softkeys become:
+
+* **Decrement**
+* **Set**
+* **Increment**
+
+### Decimal and negative values on the XP3900
+
+The XP3900's numeric keypad does not provide a normal way to type a decimal point or minus sign while a numeric field is active, so Trend provides two keypad shortcuts:
+
+* `*` inserts a decimal point.
+* `#` toggles the value between positive and negative.
+
+These shortcuts work in **Quick entry**, the **Value** field when adding a point, and the **Goal** field in Datum Setup. They apply only while one of those numeric fields has focus; `*` and `#` keep their normal behavior elsewhere.
+
+### Set
+
+Sets the current Time Basis bucket to the entered value.
+
+### Increment
+
+Adds the entered value to the current bucket. If the bucket does not exist yet, Trend starts it at zero and then applies the increment.
+
+### Decrement
+
+Subtracts the entered value from the current bucket. If the bucket does not exist yet, Trend starts it at zero and then applies the decrement.
+
+For example, if today's daily value is `12` and Quick entry contains `3`:
+
+* Increment produces `15`
+* Decrement produces `9`
+* Set produces `3`
+
+When a change is made to a bucket, the new entry time becomes that bucket's stored UTC timestamp. In ordinary use this does not change the bucket shown by Trend; it simply records when that bucket was most recently changed.
+
+If Quick entry is empty, the Datum screen keeps the normal **Edit** and **New point** actions available. Pressing Back from an empty Quick entry field returns to Data.
+
+Typing a numeric key while another part of the Datum screen is focused automatically moves the number into Quick entry and focuses the field.
+
+## Adding a Point for Another Date or Time
+
+Choose **New point** from a Datum when the measurement should not use the current time.
+
+Trend provides its own keypad-friendly date/time editor:
+
+* Up/Down chooses Year, Month, Day, Hour, or Minute
+* Left/Right changes the selected value
+* **Done** accepts the local date/time
+* **Cancel** or Back discards the date/time change
+
+Enter the measurement value and choose **Save**.
+
+If that date/time resolves to an empty Time Basis bucket, Trend creates a new point.
+
+If the bucket already contains a value, Trend asks what to do:
+
+* overwrite it with the new value,
+* increment it by the new value,
+* decrement it by the new value,
+* or cancel.
+
+The chosen operation uses the newly entered date/time as the bucket's stored UTC timestamp.
+
+## Removing Points and Deleting Data
+
+Individual measurements can be removed from a Datum's point list.
+
+Deleting a **Datum** is much more significant: Trend deletes both the Datum's application metadata **and its associated CSV file**. The confirmation dialog calls this out before deletion.
+
+Deleting a Datum also removes it from any Correlations that use it. A Correlation that is left with fewer than two Datum is removed automatically.
+
+Data and Correlation items can also be moved upward to control their list order. Analysis order follows Data order.
+
+## Charts
+
+All Trend charts are line charts.
+
+Datum and Analysis charts fill the area beneath the line. Correlation charts omit the fill so multiple lines remain easier to distinguish.
+
+If a Goal is configured, Datum and Analysis draw it as a horizontal goal line. Correlations intentionally do not show goal lines.
+
+Missing Time Basis buckets remain real gaps on the X-axis. Trend connects recorded points directly rather than pretending that an unrecorded bucket had a value of zero.
+
+If fewer than two usable points are available for a chart, Trend shows **insufficient data to chart** instead.
+
+### Datum chart
+
+The Datum preview shows up to the ten most recent points. It is meant as an at-a-glance view and is not directly inspectable.
+
+### Analysis chart
+
+Analysis charts can be inspected point-by-point with D-pad Left/Right. The selected point stays highlighted, and its timestamp and value appear in the colored readout beneath the chart.
+
+A narrow blue glow at the left edge indicates that the chart itself currently owns focus.
+
+Analysis automatically starts with the finest useful range currently available.
+
+### Chart ranges
+
+Depending on the Datum's Time Basis and available history, Trend may offer:
+
+* All time
+* Last year
+* Last month
+* Last week
+* Last day
+* Last hour
+
+These are rolling durations, not calendar boundaries:
+
+* year = 365 days
+* month = 30 days
+* week = 7 days
+* day = 24 hours
+* hour = 60 minutes
+
+For example, **Last month** means the preceding 30 days, not "since the same date last calendar month."
+
+A range is offered only when enough data exists for some part of the line to render meaningfully inside it.
+
+## Analyses and Statistics
+
+Analysis calculations use the complete Datum, regardless of which range is currently selected for the chart.
+
+With enough data, Trend shows:
+
+* overall change,
+* overall percent change,
+* change over useful recent periods,
+* percent change over useful recent periods,
+* goal projection,
+* and estimated future values.
+
+Positive changes are shown in green and negative changes in red.
+
+Recent-window statistics stop one Time Basis above the Datum itself. For example, a daily Datum can show change over the last week, month, and year, but there is no useful "change over the last day" calculation for a series whose individual points already represent days.
+
+If the exact beginning of a look-back window falls between two measurements, Trend linearly interpolates between the surrounding points. If no newer measurement exists, the latest measured value is carried forward to the present for that comparison.
+
+Percent change is omitted when the comparison baseline would be zero.
+
+### Trend projection
+
+Trend runs a least-squares linear regression over the data.
+
+The X-axis for regression is actual **Time Basis distance**, not merely record position. A daily series recorded on August 1, August 2, and August 5 therefore uses X positions 0, 1, and 4. Missing days remain missing days.
+
+Monthly data is treated in monthly units: January, February, and March are 0, 1, and 2 even though the calendar months contain different numbers of days.
+
+If a Goal exists and the regression is moving toward it, Analysis shows an estimated amount of the Datum's Time Basis remaining until the trend reaches that goal. If the measurements have already crossed the goal, it shows **Goal reached**. If the regression is moving away from the goal, Trend says that current values suggest the goal will not be reached without changes.
+
+Analysis can also project estimated values one hour, day, week, month, or year into the future where those intervals make sense for the Datum's Time Basis.
+
+These are simple linear extrapolations of the recorded trend, not predictions that account for seasonality, causation, or outside events.
+
+## Correlations
+
+A Correlation contains two to four Datum.
+
+Create one from the **Correlations** tab, give it a name, choose the data sets, and Save.
+
+The chart places the selected series on one common timeline. If their Time Bases differ, Trend uses the **finest Time Basis present** for the Correlation's X-axis. Coarser points naturally land at the beginning of the finer interval they represent—for example, a monthly point lands at the beginning of its month on a daily timeline.
+
+Each line keeps its **own independent Y scale**. This is important when comparing unlike units such as pounds, calories, dollars, or repetitions. Correlation is intended to compare the timing and shape of trends; it does not imply that the numeric heights of unrelated units are directly comparable.
+
+The currently selected line controls the visible Y-axis labels and the colored information box beneath the chart.
+
+Use D-pad Left/Right to move through points on that line. Use **Line** to switch between the currently available series.
+
+Correlation range choices are constrained by the coarsest Time Basis participating in the chart. Correlations default to **All time**.
+
+If one associated CSV is temporarily missing or invalid, Trend can still open the Correlation as long as at least two associated Datum remain available. If fewer than two associated Datum files are available, selecting the Correlation opens Correlation Setup so its membership can be repaired. Separately, a line that exists but does not have enough points for the selected chart range is simply omitted; if fewer than two lines can actually be charted, Trend shows **insufficient data to chart**.
+
+Back or Cancel from Correlation Setup does not silently change the saved membership. Changes take effect only when Save is chosen.
+
+## CSV Files and Portability
+
+The CSV files are the durable, portable part of Soneme Trend.
+
+A typical file looks like this:
+
+```csv
 Timestamp,Value,Unit,Time Basis,Goal
 ,,calories,days,2000
 2026-08-17T12:40:32Z,1450,,,
 2026-08-18T16:25:01Z,1525,,,
 ```
 
-Note that CSVs may be routinely synced and edited on external devices, so the app should never assume that they're the same as the last time a view was entered. Ownership of information is as follows:
+The layout is intentionally simple:
 
-App-private registry
- - UID
- - display name
- - CSV filename
- - ordering
- - correlation definitions → UIDs
+* Row 1 contains the fixed headings.
+* Row 2 stores Units, Time Basis, and optional Goal.
+* Row 3 onward contains measurements in chronological order.
+* Timestamps are complete UTC timestamps ending in `Z`.
+* Values and Goal are ordinary decimal numbers.
 
-CSV
- - unit
- - time basis
- - goal
- - all measurements
+Valid Time Basis values in the CSV are:
 
-Every mutating operation re-reads and validates the current CSV immediately before applying its mutation. These mutations occur in the Datum view, Datum Add view, and Datum Edit view (goal updates). If the file changed and is still valid, perform the mutation on the new file and reload the view. If the file became invalid, do not perform the mutation and fall back to Data view.
+```text
+minutes
+hours
+days
+weeks
+months
+years
+```
 
-Thus, an Increment operation looks like:
- - read current file
- - parse current rows
- - alter this bucket
- - normalize chronological order
- - write
- - rebuild view
+Trend accepts normal UTF-8 CSV quoting and both LF and CRLF line endings.
 
-Technically this does mean an increment operation could operate on a number that's unexpected if the current row was changed between the time the person opened Datum view on their phone, typed a number, and pressed increment, but at this point the user should simply know better and we can't save them from themselves. They can always fix the value.
+The CSV can be copied to another computer, synchronized with something such as [Soneme Sync](https://github.com/userexec/soneme-sync), edited with ordinary tools, or used by your own scripts and analysis software.
 
-Dates and times are stored as a full UTC instant in the CSV, and are converted to the local time then reduced to their time basis whenever read by the application. Reducing to time basis floors any information that is not required by the time basis (e.g. in a "days" time basis, hours, minutes, and seconds get set to 0--In a "months" time basis the day gets floored to the first day of the month and time values are zeroed). Note that UTC is never shown in the interface--its use is purely under the hood.
+### External edits
 
-The concept of time basis bears some explaining. Time basis determines how data points are divided into rows, and how granular data can be. Valid options are "minutes", "hours", "days", "weeks", "months" and "years". If the time basis is minutes, then each data point is for one minute, and two rows in the CSV may not share timestamps in the same minute. Additional recordings made in a row's minute overwrite that row with a new UTC instant (which we've already determind falls in the same time base bucket, so will still own this row in this time base even with the timestamp updated to the lastest time of update) and the updated data (though this looks like the same timestamp to the application, as it is converted to local time and the Datum's time basis once read out of the CSV). If the time basis is in months, then two rows in the CSV cannot share the same month. When displaying times and dates, the recorded UTC timestamp from the CSV is reduced to a bucketed timestamp appropriate to the dataset's time basis and the phone's local time as follows:
+Trend assumes CSV files may change outside the app.
 
-Timestamp formats per time basis:
- - Minutes: August 17, 2026, 2:43 PM
- - Hours: August 17, 2026, 2 PM
- - Days: August 17, 2026
- - Weeks: August 16-22, 2026
- - Months: August 2026
- - Years: 2026
+Views re-read their files rather than treating an old in-memory copy as authoritative, and every operation that changes a CSV re-reads and validates the current file immediately before writing.
 
-Whether week dates are Sunday-Saturday or Monday-Sunday should be based on the phone's locale as well and is determined when the data is recalled. If the phone never changes timezones then the data points will always reflect the user's remembered experience. If and when it does, data points may shift in time from the user's perspective since a particular point in UTC time may be a different time, day, week, etc. when in the new local time. This is expected and fine.
+If a file has changed but is still valid, Trend operates on the newer contents. If it has become missing or invalid, Trend refuses to write over it and returns to a safe recovery path instead.
 
-The phone moving into a new local timezone may cause two rows to be bucketed into the same time base timestamp. In situations where successive rows contain identical timebase timestamps once the CSV is loaded, pretend the first row doesn't exist and just use the newest data that falls in this bucket to represent this bucket.
+This makes external editing practical, but it is still possible to surprise yourself by editing the same value on another machine while simultaneously entering a change on the phone. Trend protects the file structure; it cannot infer which human edit you intended to win.
 
-Charts may be implemented as a custom Android View; an external charting library is not required.
+## What Trend Stores Where
 
-## Charts
+Trend deliberately splits portable measurement data from application-only organization.
 
-All charts are line charts.
+### In the `SonemeTrend` folder
 
-Datum and Analysis views have a fill under their line of their color at 40% opacity. Correlation view omits the fill to make lines more visible in comparison to each other.
+Each Datum CSV stores:
 
-Goal line, if a goal value is present for dataset, is a horizontal line across the chart.
+* Units
+* Time Basis
+* Goal
+* all recorded measurements
 
-Points when focused enlarge by 2x size and take on the highlight color.
+### In Trend's private application storage
 
- - Line color is #4F6F8F
- - Highlight color is #0070E0
- - Goal line color is #00FF00
+Trend keeps:
 
-Line colors when multiple lines are present are #4F6F8F, #B07156, #7B9E72, and #AB4E68
+* Datum display names
+* the association between each Datum and its CSV filename
+* Data ordering
+* Correlation names and membership
 
-Highlight colors are respectively #0070E0, #FF5005, #3FFF0F, and #FA0047
+This is why the CSV files remain useful even without the app, and also why reinstall recovery works the way it does.
 
-Line charts respect empty X axis time units and draw straight lines between data points that may be separated by unusued X axis. The data does not fall to 0 if a unit of time does not have a row with a value for it. In Correlation view, some lines may not reach the edges. Where the data cuts off, the line simply stops.
+## Reinstall and File Recovery
 
-If the chart is inspectable (Analysis and Correlation views) the user can cycle through data points shown using left and right on the D-pad. The data point is highlighted on the chart and its timestamp and value are shown in a color-matched box below the chart. Colored bar layout is a bold "[Datum name] - [units] per [time base]" centered plus line break if Correlation view, omitted if Analysis view. Then timestamp to left and value to right in either view.
+Uninstalling Trend removes its private application metadata, but CSV files in the user-selected `SonemeTrend` folder remain on the filesystem.
 
-Chart header, to left:
+After reinstalling:
 
-"[data points in view] records in range"
+1. Set up Trend with the same storage location.
+2. Open Data and choose **New**.
+3. Give the Datum whatever display name you want.
+4. Enter the filename of an existing valid CSV.
 
-Chart header, to right:
+Trend recognizes the existing file, loads its Units, Time Basis, and Goal, and attaches it without rewriting the recorded measurements.
 
-Time range select menu, "All time", "last year", "last month", "last week", "last day", "last hour" with options logically eliminated by the current dataset's time basis (e.g. monthly data will not have a "last month", "last week", or a "last day" option since that would mean one or fewer data point could be rendered). Note "last year" means 365 days, "last month" means 30 days, "last week" means 7 days, "last day" means the previous 24 hours/1440 minutes, and "last hour" means the previous 60 minutes. The chart's timeframe just means "look back by the common amount of time meant by this word," not literally "previous calendar month."
+You can repeat this for each surviving CSV.
 
-If a range would cause the chart's line to not have some part of its rendering within the chart's boundaries, do not offer the range. "All time" is therefore the only range that must always be offered. In Correlation views, this rule changes slightly to "at least one line must still have some part of its rendering within the chart's boundaries" for the range to be offered.
+Because display names, ordering, and Correlation definitions live in private application storage, those pieces must be recreated after an uninstall or application-data reset. The actual measurement history remains in the CSV files.
 
-In Correlations, the range select menu's options are limited to the coarsest currently available associated Datum. For example, if a daily and a monthly time base line are displayed in a correlation, the range selector behaves as if the chart is for a monthly time base dataset.
+If an already configured Datum later reports that its CSV is missing or unreadable, selecting that Datum opens a recovery form. Choose a valid unattached replacement CSV to reconnect it.
 
-The default range selected in Analysis view is the finest one available (e.g. if "All time" and "Last year" are available, chart defaults to "Last year"). Correlation view defaults to "All time".
+## Time Zones and Local Dates
 
-The chart header is not used on the Datum view.
+CSV timestamps are stored as UTC for portability, but UTC is never shown in Trend's normal interface.
 
-If a chart header/range selector is called for by the view (Analysis and Correlation views), the X-axis range is determined by time range select. One additional data point if available is charted off the left of the chart so that the line comes from somewhere.
+Whenever data is read, Trend converts each UTC timestamp into the phone's **current local time** and then reduces it to the Datum's Time Basis.
 
-If a chart header/range selector is not called for (Datum view), the last 10 data points are charted and they form the range bounds. If fewer than 10 are available, then as many as are availble.
+For example, a daily point is displayed as a local day, while a monthly point is displayed as a local month. Week boundaries follow the phone's current locale.
 
-If any chart has fewer than two data points available in its range (or fewer than two in total if charting without a range selector), the chart is omitted from the view. A placeholder box with "insufficient data to chart" is shown.
+This means travel can legitimately change which local bucket an old UTC timestamp falls into. A point remembered as one local day in one time zone may appear as the previous or next day after moving far enough east or west. Trend treats this as a consequence of interpreting the same portable UTC instant in the phone's current local context, not as file corruption.
 
-This rule applies to Correlation charts with a slight modification--if fewer than two lines have sufficient data points available to chart, the correlation presents the placeholder box in place of the chart. If at least two lines are sufficient, a chart will be displayed, but any additional lines that do not have sufficient data to chart simply won't be shown. If a user enters more data in those datasets and comes back later, then they'll show up.
+In the rare case where two stored UTC rows resolve to the same local Time Basis bucket, Trend displays the newest one as that bucket's value. Removing that displayed bucket removes all raw rows currently resolving to it.
 
-The right-hand edge of a chart is always defined by the most recent data point available. This holds true in Correlation charts as well, though with a slight adjustment: Their right edge is defined by the most recent data point available among all lines, and not all lines may end neatly on the chart's right edge.
+## Navigation and Softkeys
 
-Y axis range determined by data values being shown.
+Trend is designed around hardware navigation.
 
-Y axis top value is the highest charted point's value (or possibly goal line value in Datum and Analysis view, see later rules) with 2 added to its second significant digit and remaining digits zeroed (e.g. 215 becomes 230, 3451 becomes 3600, 0.0757 becomes 0.077). If the top value is negative, then 2 is removed from its second signifiant digit instead and remaining digits are zeroed (e.g. -215 becomes -190, -3451 becomes -3200, -0.757 becomes -0.73). If the minimum and maximum coincide, use that value + 1 and that value - 1 as the maximum and minimum.
+At the top level:
 
-Y-axis bottom value works the same way but in reverse--positive numbers get 2 removed from second most significant digit, negative numbers get 2 added. Same deal if goal line is below the lowest point, it forms the lowest bound.
+* D-pad Left/Right changes Data, Analyses, and Correlations tabs.
+* D-pad Up/Down moves through lists.
+* D-pad Center opens the focused item.
 
-In Datum and Analysis views, goal lines are drawn and if higher than the charted data's highest point value, or lower than the charted data's lowest point value, they are considered the highest or lowest value respectively instead of the highest or lowest point for the purposes of Y axis range. Goal lines are not used in Correlation views.
+Inside forms, Up/Down moves among controls and the Sonim softkeys provide context-appropriate actions such as Save or Cancel.
 
-Y axis labels and tick marks are at minimum, maximum, and two intermediary values.
+Inside inspectable charts, Left/Right moves through data points. Correlations also provide the **Line** softkey for choosing which line is active.
 
-X axis labels are never shown on the the chart itself. The X range is presented in the views' headings centered text consisting of the date/time of the chart's left edge (whether or not a data point is on that value), and the date/time of the last data point shown (in most cases, the chart's right edge, though Correlation views the right edge is defined by the line with the newest data, so some lines cut off early). In Datum views, since a data point will always be the left edge, the date/time of the first and last data points charted are used.
+Back generally returns to the previous logical screen. Unsaved setup changes are discarded when leaving without Save.
 
-X axis tick marks are based on the range selected e.g. last week shows ticks for days, last year shows ticks for months. "All time" omits tick marks. Datum view also omits ticks on the X axis.
+## Storage and Privacy
 
-## Views
+Soneme Trend is intentionally local-only.
 
-### Data
+It does not require:
 
-#### Controls
+* an account,
+* internet access while running,
+* Google Play Services,
+* analytics,
+* advertising,
+* a subscription,
+* or a vendor cloud service.
 
-- Back returns to launcher
+The application does not request Android's Internet permission.
 
-#### Main content
+Measurement CSV files are stored only in the `SonemeTrend` location you select. Trend's small registry of display names, ordering, and Correlation definitions remains in private application storage, and Android application backup is disabled.
 
-List of Data items. Clicking one opens its Datum view.
+If you choose to synchronize the CSV files elsewhere, privacy and security then depend on the transfer method and destination you choose.
 
-Items are the name (marquee if too long), subtext of "X data points" to the left, date/time of last entry (pretty) on the right.
+## Building
 
-Verify that the Datum's CSV file exists and is readably formatted when generating this view. Files may change. If a file is missing or malformed, replace subtext with "[file] missing or unreadable" in dark red (marquee if too long). Deletion and reordering still work. Clicking the Datum opens Datum Setup in a recovery mode where the file can be re-specified.
+Soneme Trend is a standard Gradle Android project.
 
-#### Options menu
+The build requires JDK 17 and Android SDK platform 34.
 
- - Delete
+Build a debug APK with:
 
-   Opens confirmation "Delete [name]? This will also remove all data points recorded.", options "Cancel" (default) and "Delete". Choosing delete deletes the Datum and its settings, and also its associated CSV.
+```sh
+./gradlew assembleDebug
+```
 
-   On delete also remove this Datum from the configuration of any Correlations. If a Correlation fell below 2 Datum, automatically delete the Correlation.
+For a configured signed release build:
 
- - Move up
+```sh
+export SONEME_KEYSTORE=/path/to/keystore.jks
+export SONEME_STORE_PASSWORD='...'
+export SONEME_KEY_PASSWORD='...'
+./gradlew assembleRelease
+```
 
-   Not available for first item in list. Moving items in Data list also moves them in Analyses list.
+The configured release key alias is `soneme`.
 
- - New
+The resulting APK is written beneath:
 
-   Opens Datum Setup view
+```text
+app/build/outputs/apk/
+```
 
-
-### Analyses
-
-#### Controls
-
-- Back switches to Data tab
-
-#### Main content
-
-List of available analyses, one per Datum item with same name, in the order of the Data menu. Items are only the name, marquee if too long. Clicking an item opens its Analysis view.
-
-Verify that the associated Datum's CSV file exists and is readably formatted when generating this view. Files may change. If a file is missing or malformed, gray out the Analysis and disable clicking it.
-
-#### Options menu
-
- - (blank)
-
- - (blank)
-
- - (blank)
-
-
-### Correlations
-
-#### Controls
-
-- Back returns to Analyses tab
-
-#### Main content
-
-List of available Correlation items. Name first (marquee if too long), then subtext one-per-line of Analysis items this correlation is made from.
-
-Verify that the associated Datum CSV files exist and are readably formatted when generating this view. Files may change. If a file is missing or malformed, change the missing Datum's subtext to red, but otherwise allow normal clicking. The correlation will just use the available Datum. If fewer than 2 Datum are available, clicking opens Correlation Setup view instead for this correlation with the missing Datum unchecked. Opening Correlation Setup in this repair mode does not alter the stored Correlation. Back leaves its original membership intact. Only Save changes the Correlation definition.
-
-#### Options menu
-
- - Delete
-
-   Opens confirmation "Delete [name]?"
-
- - Move up
-
-   Not available for first item in list.
-
- - New
-
-   Opens Correlation Setup view
-
-
-
-### Datum Setup
-
-#### Controls
-
-- Back returns to Data view without saving
-
-#### Main content
-
-Form:
-
-Name - Name to be displayed in the Data list. Must be unique among Data items, case-insensitive.
-
-CSV filename - file is saved to the SonemeTrend folder. User is allowed to choose a filename since it's assumed this file will be transferred for use elsewhere with Soneme Sync and may have special naming considerations. Name must contain only filename-safe characters, end in .csv, and the filename must not already be associated with another Datum. If it exists in the SonemeTrend folder and is a valid unattached Soneme Trend CSV, it will be attached to this new Datum. If it does not exist, a new CSV will be created.
-
-Units - What are you measuring? Show label "Units, Y-axis", line below label "e.g. calories, repetitions, millimeters". Some value required.
-
-Time basis - By what unit of time are measurements considered a single data point? Show label "Time basis per measurement, X-axis", lines below label "Determines when a data point is incremented versus when a new data point is created." "How often do you plan to take measurements?". Input is a select with options for "per minute", "per hour", "per day", "per week", "per month", and "per year".
-
-Goal - Optional value, draws a horizontal line on the chart and is used in an Analysis display. Must be a valid number or float, positive or negative, or 0.
-
-
-Text block below form:
-
-Examples:
-
-Calories per day
-
-Millimeters per hour
-
-Repetitions per week
-
-Books per month
-
-
-If a CSV filename that already exists is entered, if it is not associated with any other data items and it contains a valid Soneme Trend layout and values, set the units, time basis, and goal fields to match this CSV and disable entry into them unless filename is changed again to one that doesn't exist. This is how recovery and adding pre-made files works.
-
-This view may be opened again with the Edit option under Datum view. If editing an existing Datum, lock the CSV filename, Units, and Time basis fields. Only the Name and Goal may be adjusted.
-
-This view may also be opened in a "Recovery mode". Lock all fields but CSV filename. On Save, check if provided filename exists and contains a valid layout and if so re-populate the Units, Time basis, and Goal fields from it and return to Data view. If not valid, toast "Invalid CSV".
-
-#### Options menu
-
- - Cancel
-
- - (blank)
-
- - Save
-
-
-
-### Datum
-
-#### Controls
-
-- Back button returns to Data view unless cursor is in quick entry field, in which case it will naturally act as a backspace. User will need to change focus to activate back. An invisible anchor at top of page may need to be provided so that D-pad up can be used to unfocus the quick entry field naturally, but this may also be handled with normal scroll actions, really not sure--might just require testing.
-
-#### Main content
-
-Header, to left:
-
-Datum name, marquee if too long
-
-Subtext, "[units] per [time base]"
-
-Header, to right:
-
-Total data points collected,
-Subtext "Records"
-
-Small chart preview of up to 10 most recent points, roughly half screen height. No chart header/range selector.
-
-Quick entry field - Adds a data point with a timestamp of now. Only accepts valid numbers and floats (positive or negative) or 0. Keying input method always changes to 123 (numeric) when this field is focused--not sure how that works, but some form of marking the field as numeric only likely activates this on the system.
-
-Data points heading
-
-Data points list with focusable data points presented as two columns, Timestamp and Value. List is in descending order of points' timestamps, most recent first. Focus focuses both columns for a given point and shows a Remove option in the options menu. Removal of a point refreshes the chart preview, but focus stays where it was. It is now on the following data point in the list if additional points existed, or on the previous data in the list if removed was the last in list. If no data points remain, focus goes to the quick entry field.
-
-"No data recorded yet" displayed if no entries.
-
-If at any point in this view the user types a number on the keypad while not focused into the quick entry field, insert the number into the quick entry field and focus the quick entry field with the cursor at the end.
-
-#### Options menu
-
-When the quick entry field is not focused, options are:
-
- - Remove
-
-   Only appears if focus is on a data point item. Opens confirmation 'Remove data point "[value]" from [timestamp]?'. Options "Cancel" (default) and "Remove". Remove removes the row in the CSV and refreshes this Datum. Focus behavior is described above in Main Content heading for Datum view.
-
- - Edit
-
-   Opens Datum Setup
-
- - New Point
-
-   Opens Datum Add
-
-When quick entry field is focused, options are:
-
- - Decrement
-
-   Decrements the current timestamp's value with the number in the quick entry field. If no data point exists for the current timestamp, create one and assume its initial value would have been 0. Option disappears when value of quick entry field is not a valid number or float. On success, clear the quick edit field and show a toast "Current [time base] decremented by [quick edit value] to [entry value].". Focus stays in quick edit field.
-
- - Set
-
-   Sets this timestamp's value to the number in the quick entry field. If no data point exists for the current timestamp, create one. Option disappears when value of quick entry field is not a valid number or float. On success, clear the quick edit field and show a toast "Current [time base] set to [entry value].". Focus stays in quick edit field.
-
- - Increment
-
-   Increments the current timestamp's value with the number in the quick entry field. If no data point exists for the current timestamp, create one and assume its initial value would have been 0. Option disappears when value of quick entry field is not a valid number or float. On success, clear the quick edit field and show a toast "Current [time base] incremented by [quick edit value] to [entry value].". Focus stays in quick edit field.
-
-
-### Datum Add
-
-#### Controls
-
- - Back returns to Datum view
-
-#### Main content
-
-Manually enter data points using this view. Useful for when adding multiple measurements recorded elsewhere over time, or situations where you need to add a data point outside of the current timestamp.
-
-If Save is clicked and the timestamp entered (once resolved to its time base representation) already exists in the dataset, blank the options menu and pop up a menu with explanation "[timebase resolved timestamp] already has a value of [value]." and options "Cancel" (default), "Overwrite with [new value]" "Increment by [new value]" "Decrement by [new value]". Clicking cancel returns to the Datum Add form and restores the options menu as it was before clicking Save. Clicking another option performs the requested action on that data point's value and returns to the Datum view.
-
-Fields:
-
-Date/time picker
-
-Value (valid number or float, positive or negative, or 0)
-
-#### Options menu
-
- - Cancel
-
-   Returns to Datum view without saving
-
- - (blank)
-
- - Save
-
-   Saves new data point
-
-
-### Analysis
-
-#### Controls
-
-- Back returns to Analyses view
-- Left and right D-pad move between available data points on chart
-- Up and down D-pad scroll
-
-#### Main content
-
-Header, to left:
-
-Analysis name, marquee if too long
-
-Subtext, "[units] per [time base]"
-
-Header, to right:
-
-Total data points collected,
-Subtext "Records"
-
-Chart with header and range selector, large format, taking up most of screen. Note that range selector does not affect any statistics shown in this view, and is only for the chart.
-
-Colored bar in chart's line color with white text takes up remaining "above the fold" screen. Focus in this view begins on the right-most data point in the chart, and only the chart points are focusable in this view. Colored bar shows data point timestamp to left and value to right.
-
-Statistics heading
-
-If less than 2 data points exist, "insufficient data for statistics" is shown.
-
-Change over time subheading
-
-Overall change - Large number (green with green up arrow if increase, red with red down arrow if decrease):
-
-Smaller numbers (normal formatting, black text):
-Change over [largest range with complete data, e.g. "last year"], repeat with each smaller range until dataset time base is reached.
-
-Percent change subheading
-
-All time - Large number (green with green up arrow if increase, red with red down arrow if decrease)
-
-Smaller numbers (normal formatting, black text):
-% change over [largest range with complete data, e.g. "last year"], repeat with each smaller range until next time base up from dataset's is reached (e.g. "minute" time base doesn't show "% change over last minute" because there can't be any).
-
-Changes ideally assume data exists on the points in question, i.e. for "last year" hopefully there's a data point today and exactly 365 days ago. If not, then assume today's value would be unchanged from the most recent value, and if no point exists 365 days ago, interpolate between the two data points on either side of the 365 day mark. If a data point only exists 364 days ago, there is not enough data and "% change over last year" would need to wait one more day to be shown. This pattern repeats down to the dataset time base. Smaller ranges are thus more likely to have "% change over" entries, but the Analysis view may have none to show if this is a relatively new dataset (e.g. a weekly set that is less than 7 days old). Percent changes are rounded to the nearest whole number. Changes over time are limited to two decimal places if the answer's absolute value is below 1, one decimal place if the answer's absolute value is over 1 but less than 100, and no decimal places if the answer's absolute value is 100 or more.
-
-Percent change from 0: If the baseline for any comparison would be zero, do not calculate and do not show the calculation. If a dataset starts at 0, it will never show an overall % change, for example. If a dataset dips to 0 and that would be the number to compare to over a "% change over" window, do not calculator or show that statistic.
-
-Run a least squares linear regression on the dataset to get the following numbers. Regression should be over elapsed time, not just the data's position in the dataset. Same rules apply to time lookbehinds as in the rest of the program e.g. a year is 365 arbitrary days, not the actual calendar year cutoff, and the estimated time to goal is from the last recorded data point, not today's date. This is a display of "here's what happens after the chart if the trend continues," not a countdown. Specirfically:
-
-If daily time base:
-August 1 x=0
-August 2 x=1
-August 5 x=4
-
-If monthly time base:
-January x=0
-February x=1 (note that February is not a shorter interval just because it is, in reality, a shorter month)
-March x=2
-...
-December x=11
-
-If a goal value exists and regression indicates it will be reached:
-Estimated time to goal: [time in dataset time base e.g. 5 weeks]
-(if regression indicates it will not be reached, "Current values suggest goal will not be reached without changes.")
-If the dataset's oldest point is lower than goal and latest point is equal to or higher than goal, show "Goal reached." Same if oldest point is higher than goal and latest point is equal to or lower. If the dataset's oldest point is equal to the goal, ignore goal regression calculations entirely and don't show this section of the interface.
-If the latest point has not yet reached the goal but the regression indicates the trend would have already reached it by now, show 0 in dataset timebase e.g. 0 weeks.
-
-"Estimated value in..." heading, multiple items below may be shown depending on dataset timebase.
- - one hour (if time base is minutes)
- - one day (if time base is hours or minutes)
- - one week (if time base is days, hours, or minutes)
- - one month (if time base is weeks, days, hours, or minutes)
- - one year (if time base is months, weeks, days, hours, or minutes)
-
-#### Options menu
-
- - (blank)
-
- - (blank)
-
- - Top
-
-   Scrolls to top
-
-
-
-### Correlation Setup
-
-#### Controls
-
-- Back button returns to Correlations view
-
-#### Main content
-
-Name input, must be case-insensitive unique among Correlations.
-
-Instructions: Choose two to four datasets.
-
-Checkbox list of Datum names. Datum that are unavailable are disabled/grayed out and unchecked.
-
-This view may be arrived at in a repair mode from Correlations view if too few Datum are available (e.g. their files went missing). In this mode the unavailable Datum are unchecked, but no changes are made until Save is pressed and the user can still hit back to retain original membership.
-
-#### Options menu
-
- - (blank)
-
- - (blank)
-
- - Save
-
-   Appears when name is valid and 2-4 datum are checked. Disappears when conditions are not met.
-
-
-
-### Correlation
-
-#### Controls
-
-- Back returns to Correlations view
-- D-pad left and right navigate points on selected line
-- D-pad up and down presumably scroll, but ideally this display fills the screen exactly and is never becomes scrollable
-
-#### Main content
-
-Header, to left:
-
-Correlation name, marquee if too long
-
-Chart with header and range selector, large format, taking up most of screen.
-
-Colored bar in currently selected line color with white text takes up remaining "above the fold" screen. Focus in this view begins on the right-most data point in the chart's first dataset's line, and only the chart points of the selected line are focusable in this view. Colored bar shows data point timestamp to left and value to right. Default line order is determined by Datum order.
-
-Chart Y-axis markings are controlled by the selected line, though all lines independently follow their own Y axis whether or not it is visible.
-
-X axis ticks are determined by the range selected.
-
-Goal lines are not considered in Correlation views.
-
-#### Options menu
-
- - Edit
-
-   Opens Correlation Setup for this Correlation
-
- - (blank)
-
- - Line
-
-   Opens menu with the current Correlation's currently plotted lines (order is Datum order). Selecting one focuses the last point in its line, changes the colored bar to its color, populates the last point's data into the colored bar, and foregrounds its line over the others. Initial selection is the first plotted line. If a range change causes a plotted line to disappear (e.g. a line has data ending 6 months ago, but last month is selected as the range), disable this line's option until a suitable range brings it back into the rendering and automatically select the first available line that is still on the plot.
+The application targets Android 14 APIs while supporting Android 11 and newer (`minSdk 30`). Future APK updates installed over an existing release must use the same signing identity.
