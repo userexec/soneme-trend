@@ -42,13 +42,13 @@ Both analyses and correlations are generated when requested using the data from 
 
 Note Datum are internally referenced by a UID, not their name, so that renaming them doesn't break Correlations.
 
-Data is saved in CSV files under the SonemeTrend folder selected. UTF-8, normal comma separation, quote cells containing commas or quotes, escape quotes, accept LF or CRLF, etc. Each CSV file contains "Timestamp", "Value", "Unit", "Time Basis", and "Goal" in row 1 columns 1-5, valid timestamps in column 1 rows 3-x, values in column 2 rows 3-x, units string in column 3 row 2, time basis string in column 4 row 2, and empty cell or number or float in column 5 row 2. In summary, headings are on row 1, settings are on row 2, and data starts on row 3. CSV data (that is, row 3 and on) is always chronological ascending. New data that requires a new row should be inserted into the order rather than appended after it.
+Data is saved in CSV files under the SonemeTrend folder selected. UTF-8, normal comma separation, quote cells containing commas or quotes, escape quotes, accept LF or CRLF, etc. Each CSV file contains "Timestamp", "Value", "Unit", "Time Basis", and "Goal" in row 1 columns 1-5, valid timestamps in column 1 rows 3-x, values in column 2 rows 3-x, units string in column 3 row 2, time basis string in column 4 row 2, and empty cell or number or float in column 5 row 2. In summary, headings are on row 1, settings are on row 2, and data starts on row 3. CSV data (that is, row 3 and on) is always chronological ascending. New data that requires a new row should be inserted into the order rather than appended after it. CSV numeric fields value and goal should parse to BigDecimal, reject NaN, infinites, malformed values, etc. Incrementing/decrementing/setting these values should use BigDecimal. Charts and least squares math can convert to Double internally if needed.
 
 ```
 Timestamp,Value,Unit,Time Basis,Goal
 ,,calories,days,2000
 2026-08-17T12:40:32Z,1450,,,
-2026-08-17T16:25:01Z,1525,,,
+2026-08-18T16:25:01Z,1525,,,
 ```
 
 Note that CSVs may be routinely synced and edited on external devices, so the app should never assume that they're the same as the last time a view was entered. Ownership of information is as follows:
@@ -78,9 +78,9 @@ Thus, an Increment operation looks like:
 
 Technically this does mean an increment operation could operate on a number that's unexpected if the current row was changed between the time the person opened Datum view on their phone, typed a number, and pressed increment, but at this point the user should simply know better and we can't save them from themselves. They can always fix the value.
 
-Dates and times are stored as a full UTC instant in the CSV, and are converted to the local time then reduced to their time basis whenever read by the application. Note that UTC is never shown in the interface--its use is purely under the hood.
+Dates and times are stored as a full UTC instant in the CSV, and are converted to the local time then reduced to their time basis whenever read by the application. Reducing to time basis floors any information that is not required by the time basis (e.g. in a "days" time basis, hours, minutes, and seconds get set to 0--In a "months" time basis the day gets floored to the first day of the month and time values are zeroed). Note that UTC is never shown in the interface--its use is purely under the hood.
 
-The concept of time basis bears some explaining. Time basis determines how data points are divided into rows, and how granular data can be. Valid options are "minutes", "hours", "days", "weeks", "months" and "years". If the time basis is minutes, then each data point is for one minute, and two rows in the CSV may not share timestamps in the same minute. Additional recordings made in a row's minute overwrite that row with a new UTC instant and the updated data (though this looks like the same timestamp to the application, as it is converted to local time and the Datum's time basis once read out of the CSV). If the time basis is in months, then two rows in the CSV cannot share the same month. When displaying times and dates, the recorded UTC timestamp from the CSV is reduced to a bucketed timestamp appropriate to the dataset's time basis and the phone's local time as follows:
+The concept of time basis bears some explaining. Time basis determines how data points are divided into rows, and how granular data can be. Valid options are "minutes", "hours", "days", "weeks", "months" and "years". If the time basis is minutes, then each data point is for one minute, and two rows in the CSV may not share timestamps in the same minute. Additional recordings made in a row's minute overwrite that row with a new UTC instant (which we've already determind falls in the same time base bucket, so will still own this row in this time base even with the timestamp updated to the lastest time of update) and the updated data (though this looks like the same timestamp to the application, as it is converted to local time and the Datum's time basis once read out of the CSV). If the time basis is in months, then two rows in the CSV cannot share the same month. When displaying times and dates, the recorded UTC timestamp from the CSV is reduced to a bucketed timestamp appropriate to the dataset's time basis and the phone's local time as follows:
 
 Timestamp formats per time basis:
  - Minutes: August 17, 2026, 2:43 PM
@@ -91,6 +91,8 @@ Timestamp formats per time basis:
  - Years: 2026
 
 Whether week dates are Sunday-Saturday or Monday-Sunday should be based on the phone's locale as well and is determined when the data is recalled. If the phone never changes timezones then the data points will always reflect the user's remembered experience. If and when it does, data points may shift in time from the user's perspective since a particular point in UTC time may be a different time, day, week, etc. when in the new local time. This is expected and fine.
+
+The phone moving into a new local timezone may cause two rows to be bucketed into the same time base timestamp. In situations where successive rows contain identical timebase timestamps once the CSV is loaded, pretend the first row doesn't exist and just use the newest data that falls in this bucket to represent this bucket.
 
 Charts may be implemented as a custom Android View; an external charting library is not required.
 
@@ -422,13 +424,25 @@ Percent change subheading
 All time - Large number (green with green up arrow if increase, red with red down arrow if decrease)
 
 Smaller numbers (normal formatting, black text):
-% change over [largest range with complete data, e.g. "last year"], repeat with each smaller range until dataset time base is reached.
+% change over [largest range with complete data, e.g. "last year"], repeat with each smaller range until next time base up from dataset's is reached (e.g. "minute" time base doesn't show "% change over last minute" because there can't be any).
 
 Changes ideally assume data exists on the points in question, i.e. for "last year" hopefully there's a data point today and exactly 365 days ago. If not, then assume today's value would be unchanged from the most recent value, and if no point exists 365 days ago, interpolate between the two data points on either side of the 365 day mark. If a data point only exists 364 days ago, there is not enough data and "% change over last year" would need to wait one more day to be shown. This pattern repeats down to the dataset time base. Smaller ranges are thus more likely to have "% change over" entries, but the Analysis view may have none to show if this is a relatively new dataset (e.g. a weekly set that is less than 7 days old). Percent changes are rounded to the nearest whole number. Changes over time are limited to two decimal places if the answer's absolute value is below 1, one decimal place if the answer's absolute value is over 1 but less than 100, and no decimal places if the answer's absolute value is 100 or more.
 
 Percent change from 0: If the baseline for any comparison would be zero, do not calculate and do not show the calculation. If a dataset starts at 0, it will never show an overall % change, for example. If a dataset dips to 0 and that would be the number to compare to over a "% change over" window, do not calculator or show that statistic.
 
-Run a least squares linear regression on the dataset to get the following numbers. Regression should be over elapsed time, not just the data's position in the dataset. Same rules apply to time lookbehinds as in the rest of the program e.g. a year is 365 arbitrary days, not the actual calendar year cutoff, and the estimated time to goal is from the last recorded data point, not today's date. This is a display of "here's what happens after the chart if the trend continues," not a countdown.
+Run a least squares linear regression on the dataset to get the following numbers. Regression should be over elapsed time, not just the data's position in the dataset. Same rules apply to time lookbehinds as in the rest of the program e.g. a year is 365 arbitrary days, not the actual calendar year cutoff, and the estimated time to goal is from the last recorded data point, not today's date. This is a display of "here's what happens after the chart if the trend continues," not a countdown. Specirfically:
+
+If daily time base:
+August 1 x=0
+August 2 x=1
+August 5 x=4
+
+If monthly time base:
+January x=0
+February x=1 (note that February is not a shorter interval just because it is, in reality, a shorter month)
+March x=2
+...
+December x=11
 
 If a goal value exists and regression indicates it will be reached:
 Estimated time to goal: [time in dataset time base e.g. 5 weeks]
@@ -499,7 +513,7 @@ Correlation name, marquee if too long
 
 Chart with header and range selector, large format, taking up most of screen.
 
-Colored bar in currently selected line color with white text takes up remaining "above the fold" screen. Focus in this view begins on the right-most data point in the chart's first dataset's line, and only the chart points of the selected line are focusable in this view. Colored bar shows data point timestamp to left and value to right.
+Colored bar in currently selected line color with white text takes up remaining "above the fold" screen. Focus in this view begins on the right-most data point in the chart's first dataset's line, and only the chart points of the selected line are focusable in this view. Colored bar shows data point timestamp to left and value to right. Default line order is determined by Datum order.
 
 Chart Y-axis markings are controlled by the selected line, though all lines independently follow their own Y axis whether or not it is visible.
 
@@ -517,4 +531,4 @@ Goal lines are not considered in Correlation views.
 
  - Line
 
-   Opens menu with the current Correlation's currently plotted lines. Selecting one focuses the last point in its line, changes the colored bar to its color, populates the last point's data into the colored bar, and foregrounds its line over the others. Initial selection is the first plotted line. If a range change causes a plotted line to disappear (e.g. a line has data ending 6 months ago, but last month is selected as the range), disable this line's option until a suitable range brings it back into the rendering and automatically select the first available line that is still on the plot.
+   Opens menu with the current Correlation's currently plotted lines (order is Datum order). Selecting one focuses the last point in its line, changes the colored bar to its color, populates the last point's data into the colored bar, and foregrounds its line over the others. Initial selection is the first plotted line. If a range change causes a plotted line to disappear (e.g. a line has data ending 6 months ago, but last month is selected as the range), disable this line's option until a suitable range brings it back into the rendering and automatically select the first available line that is still on the plot.
