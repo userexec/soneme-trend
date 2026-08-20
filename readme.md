@@ -47,8 +47,8 @@ Data is saved in CSV files under the SonemeTrend folder selected. UTF-8, normal 
 ```
 Timestamp,Value,Unit,Time Basis,Goal
 ,,calories,days,2000
-"August 17, 2026",1450,,,
-"August 18, 2026",1525,,,
+2026-08-17T12:40:32Z,1450,,,
+2026-08-17T16:25:01Z,1525,,,
 ```
 
 Note that CSVs may be routinely synced and edited on external devices, so the app should never assume that they're the same as the last time a view was entered. Ownership of information is as follows:
@@ -78,7 +78,7 @@ Thus, an Increment operation looks like:
 
 Technically this does mean an increment operation could operate on a number that's unexpected if the current row was changed between the time the person opened Datum view on their phone, typed a number, and pressed increment, but at this point the user should simply know better and we can't save them from themselves. They can always fix the value.
 
-Dates and times are stored as a full UTC instant in the CSV, and are converted to the local time then reduced to their time basis whenever read by the application.
+Dates and times are stored as a full UTC instant in the CSV, and are converted to the local time then reduced to their time basis whenever read by the application. Note that UTC is never shown in the interface--its use is purely under the hood.
 
 The concept of time basis bears some explaining. Time basis determines how data points are divided into rows, and how granular data can be. Valid options are "minutes", "hours", "days", "weeks", "months" and "years". If the time basis is minutes, then each data point is for one minute, and two rows in the CSV may not share timestamps in the same minute. Additional recordings made in a row's minute overwrite that row with a new UTC instant and the updated data (though this looks like the same timestamp to the application, as it is converted to local time and the Datum's time basis once read out of the CSV). If the time basis is in months, then two rows in the CSV cannot share the same month. When displaying times and dates, the recorded UTC timestamp from the CSV is reduced to a bucketed timestamp appropriate to the dataset's time basis and the phone's local time as follows:
 
