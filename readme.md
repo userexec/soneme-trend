@@ -26,6 +26,8 @@ Resolve the actual SonemeTrend folder as follows:
  - Otherwise, if the selected folder already contains a child folder named "SonemeTrend" (case-insensitive), use that existing child.
  - Otherwise, create a new "SonemeTrend" child folder inside the selected folder and use it. Persist access to the selected storage tree and remember the resolved SonemeTrend folder within it. Do not create a second SonemeTrend folder merely because an existing one uses different capitalization, and do not rename an existing case variant just to normalize capitalization.
 
+If the SonemeTrend folder itself ever disappears, revert to first setup instructions and let the user pick a new folder. This may happen when a user upgrades SD cards, for example.
+
 Application has three tabs: Data, Analyses, and Correlations
 
 Application normally opens to Data view.
@@ -64,7 +66,7 @@ CSV
  - goal
  - all measurements
 
-Every mutating operation re-reads and validates the current CSV immediately before applying its mutation. These mutations occur in the Datum view and Datum Add view. If the file changed and is still valid, perform the mutation on the new file and reload the view. If the file became invalid, do not perform the mutation and fall back to Data view.
+Every mutating operation re-reads and validates the current CSV immediately before applying its mutation. These mutations occur in the Datum view, Datum Add view, and Datum Edit view (goal updates). If the file changed and is still valid, perform the mutation on the new file and reload the view. If the file became invalid, do not perform the mutation and fall back to Data view.
 
 Thus, an Increment operation looks like:
  - read current file
@@ -76,19 +78,19 @@ Thus, an Increment operation looks like:
 
 Technically this does mean an increment operation could operate on a number that's unexpected if the current row was changed between the time the person opened Datum view on their phone, typed a number, and pressed increment, but at this point the user should simply know better and we can't save them from themselves. They can always fix the value.
 
-The concept of time basis bears some explaining. Time basis determines how data points are divided into rows. Valid options are "minutes", "hours", "days", "weeks", "months" and "years". If the time basis is minutes, then each data point is for one minute, and two rows in the CSV may not share timestamps in the same minute. When the timestamp is represented, it is represented out to the minute. If the time basis is in months, then two rows in the CSV cannot share the same month. When recording data to CSV, the current data/time is reduced to a timestamp appropriate to the dataset's time basis as follows:
+Dates and times are stored as a full UTC instant in the CSV, and are converted to the local time then reduced to their time basis whenever read by the application.
 
-Timestamp formats:
- - August 17, 2026, 2:43 PM
- - August 17, 2026, 2 PM
- - August 17, 2026
- - August 16-22, 2026
- - August 2026
- - 2026
+The concept of time basis bears some explaining. Time basis determines how data points are divided into rows, and how granular data can be. Valid options are "minutes", "hours", "days", "weeks", "months" and "years". If the time basis is minutes, then each data point is for one minute, and two rows in the CSV may not share timestamps in the same minute. Additional recordings made in a row's minute overwrite that row with a new UTC instant and the updated data (though this looks like the same timestamp to the application, as it is converted to local time and the Datum's time basis once read out of the CSV). If the time basis is in months, then two rows in the CSV cannot share the same month. When displaying times and dates, the recorded UTC timestamp from the CSV is reduced to a bucketed timestamp appropriate to the dataset's time basis and the phone's local time as follows:
 
-Any time a timestamp needs to be converted and it is missing information to do so, e.g. a year timestamp needs to be converted to a minute timestamp, the first possible value is assumed for any missing. For example, the year timestamp 2026 converted to a minute timestamp is January 1, 2026, 12:00 AM. August 16-22, 2026 converted to hour is August 16, 2026, 12 AM. Conversion is only used in Correlation views where datasets in multiple timebases may need to be displayed on the same chart.
+Timestamp formats per time basis:
+ - Minutes: August 17, 2026, 2:43 PM
+ - Hours: August 17, 2026, 2 PM
+ - Days: August 17, 2026
+ - Weeks: August 16-22, 2026
+ - Months: August 2026
+ - Years: 2026
 
-Whether week dates are Sunday-Saturday or Monday-Sunday should be based on the phone's locale when a week-based Datum is empty--the first entry on this phone will use the phone's locale. Once it contains records, infer the locale conventions from the existing data.
+Whether week dates are Sunday-Saturday or Monday-Sunday should be based on the phone's locale as well and is determined when the data is recalled. If the phone never changes timezones then the data points will always reflect the user's remembered experience. If and when it does, data points may shift in time from the user's perspective since a particular point in UTC time may be a different time, day, week, etc. when in the new local time. This is expected and fine.
 
 Charts may be implemented as a custom Android View; an external charting library is not required.
 
@@ -122,7 +124,11 @@ Chart header, to right:
 
 Time range select menu, "All time", "last year", "last month", "last week", "last day", "last hour" with options logically eliminated by the current dataset's time basis (e.g. monthly data will not have a "last month", "last week", or a "last day" option since that would mean one or fewer data point could be rendered). Note "last year" means 365 days, "last month" means 30 days, "last week" means 7 days, "last day" means the previous 24 hours/1440 minutes, and "last hour" means the previous 60 minutes. The chart's timeframe just means "look back by the common amount of time meant by this word," not literally "previous calendar month."
 
+If a range would cause the chart's line to not have some part of its rendering within the chart's boundaries, do not offer the range. "All time" is therefore the only range that must always be offered. In Correlation views, this rule changes slightly to "at least one line must still have some part of its rendering within the chart's boundaries" for the range to be offered.
+
 In Correlations, the range select menu's options are limited to the coarsest currently available associated Datum. For example, if a daily and a monthly time base line are displayed in a correlation, the range selector behaves as if the chart is for a monthly time base dataset.
+
+The default range selected in Analysis view is the finest one available (e.g. if "All time" and "Last year" are available, chart defaults to "Last year"). Correlation view defaults to "All time".
 
 The chart header is not used on the Datum view.
 
@@ -246,11 +252,11 @@ Name - Name to be displayed in the Data list. Must be unique among Data items, c
 
 CSV filename - file is saved to the SonemeTrend folder. User is allowed to choose a filename since it's assumed this file will be transferred for use elsewhere with Soneme Sync and may have special naming considerations. Name must contain only filename-safe characters, end in .csv, and the filename must not already be associated with another Datum. If it exists in the SonemeTrend folder and is a valid unattached Soneme Trend CSV, it will be attached to this new Datum. If it does not exist, a new CSV will be created.
 
-Units - What are you measuring? Show label "Units, Y-axis", line below label "e.g. calories, repetitions, millimeters"
+Units - What are you measuring? Show label "Units, Y-axis", line below label "e.g. calories, repetitions, millimeters". Some value required.
 
 Time basis - By what unit of time are measurements considered a single data point? Show label "Time basis per measurement, X-axis", lines below label "Determines when a data point is incremented versus when a new data point is created." "How often do you plan to take measurements?". Input is a select with options for "per minute", "per hour", "per day", "per week", "per month", and "per year".
 
-Goal - Optional value, draws a horizontal line on the chart and is used in an Analysis display. Must be a number or float.
+Goal - Optional value, draws a horizontal line on the chart and is used in an Analysis display. Must be a valid number or float, positive or negative, or 0.
 
 
 Text block below form:
@@ -303,7 +309,7 @@ Subtext "Records"
 
 Small chart preview of up to 10 most recent points, roughly half screen height. No chart header/range selector.
 
-Quick entry field - Adds a data point with a timestamp of now. Only accepts valid whole numbers and floats. Keying input method always changes to 123 (numeric) when this field is focused--not sure how that works, but some form of marking the field as numeric only likely activates this on the system.
+Quick entry field - Adds a data point with a timestamp of now. Only accepts valid numbers and floats (positive or negative) or 0. Keying input method always changes to 123 (numeric) when this field is focused--not sure how that works, but some form of marking the field as numeric only likely activates this on the system.
 
 Data points heading
 
@@ -360,7 +366,7 @@ Fields:
 
 Date/time picker
 
-Value
+Value (valid number or float, positive or negative, or 0)
 
 #### Options menu
 
@@ -418,7 +424,7 @@ All time - Large number (green with green up arrow if increase, red with red dow
 Smaller numbers (normal formatting, black text):
 % change over [largest range with complete data, e.g. "last year"], repeat with each smaller range until dataset time base is reached.
 
-Changes ideally assume data exists on the points in question, i.e. for "last year" hopefully there's a data point today and exactly 365 days ago. If not, then assume today's value would be unchanged from the most recent value, and if no point exists 365 days ago, interpolate between the two data points on either side of the 365 day mark. If a data point only exists 364 days ago, there is not enough data and "% change over last year" would need to wait one more day to be shown. This pattern repeats down to the dataset time base. Smaller ranges are thus more likely to have "% change over" entries, but the Analysis view may have none to show if this is a relatively new dataset (e.g. a weekly set that is less than 7 days old). Percent changes are rounded to the nearest whole number. Changes over time are limited to two decimal places if the answer is below 1, one decimal place if the answer is over 1 but less than 100, and no decimal places if the answer is 100 or more.
+Changes ideally assume data exists on the points in question, i.e. for "last year" hopefully there's a data point today and exactly 365 days ago. If not, then assume today's value would be unchanged from the most recent value, and if no point exists 365 days ago, interpolate between the two data points on either side of the 365 day mark. If a data point only exists 364 days ago, there is not enough data and "% change over last year" would need to wait one more day to be shown. This pattern repeats down to the dataset time base. Smaller ranges are thus more likely to have "% change over" entries, but the Analysis view may have none to show if this is a relatively new dataset (e.g. a weekly set that is less than 7 days old). Percent changes are rounded to the nearest whole number. Changes over time are limited to two decimal places if the answer's absolute value is below 1, one decimal place if the answer's absolute value is over 1 but less than 100, and no decimal places if the answer's absolute value is 100 or more.
 
 Percent change from 0: If the baseline for any comparison would be zero, do not calculate and do not show the calculation. If a dataset starts at 0, it will never show an overall % change, for example. If a dataset dips to 0 and that would be the number to compare to over a "% change over" window, do not calculator or show that statistic.
 
@@ -427,7 +433,7 @@ Run a least squares linear regression on the dataset to get the following number
 If a goal value exists and regression indicates it will be reached:
 Estimated time to goal: [time in dataset time base e.g. 5 weeks]
 (if regression indicates it will not be reached, "Current values suggest goal will not be reached without changes.")
-If the dataset's oldest point is lower than goal and latest point is higher than goal, show "Goal reached." Same if oldest point is higher than goal and latest point is lower.
+If the dataset's oldest point is lower than goal and latest point is equal to or higher than goal, show "Goal reached." Same if oldest point is higher than goal and latest point is equal to or lower. If the dataset's oldest point is equal to the goal, ignore goal regression calculations entirely and don't show this section of the interface.
 If the latest point has not yet reached the goal but the regression indicates the trend would have already reached it by now, show 0 in dataset timebase e.g. 0 weeks.
 
 "Estimated value in..." heading, multiple items below may be shown depending on dataset timebase.
@@ -461,7 +467,7 @@ Name input, must be case-insensitive unique among Correlations.
 
 Instructions: Choose two to four datasets.
 
-Checkbox list of Datum names. Datum that are unavailable are disabled/grayed out.
+Checkbox list of Datum names. Datum that are unavailable are disabled/grayed out and unchecked.
 
 This view may be arrived at in a repair mode from Correlations view if too few Datum are available (e.g. their files went missing). In this mode the unavailable Datum are unchecked, but no changes are made until Save is pressed and the user can still hit back to retain original membership.
 
@@ -511,4 +517,4 @@ Goal lines are not considered in Correlation views.
 
  - Line
 
-   Opens menu with the current Correlation's available datum names. Selecting one focuses the last point in its line, changes the colored bar to its color, populates the last point's data into the colored bar, and foregrounds its line over the others.
+   Opens menu with the current Correlation's currently plotted lines. Selecting one focuses the last point in its line, changes the colored bar to its color, populates the last point's data into the colored bar, and foregrounds its line over the others. Initial selection is the first plotted line. If a range change causes a plotted line to disappear (e.g. a line has data ending 6 months ago, but last month is selected as the range), disable this line's option until a suitable range brings it back into the rendering and automatically select the first available line that is still on the plot.
